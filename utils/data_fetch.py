@@ -40,5 +40,5 @@ if __name__ == '__main__':
     portfolio = Portfolio.default()
     index_components = get_index_components(portfolio.index)
     print(index_components)
-    # data = fetch_data(portfolio)
-    # print(data)
+    data = fetch_data(portfolio)
+    print(data)
