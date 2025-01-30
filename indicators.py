@@ -50,6 +50,73 @@ def RSI(df: pd.DataFrame, window=14)->pd.DataFrame:
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
+
+def Momentum(df: pd.DataFrame, symbol: str, lookback=14) -> pd.Series:
+    momentum = df[symbol] / df[symbol].shift(lookback) - 1
+    return pd.DataFrame({'Momentum': momentum})
+
+
+def ExponentialMovingAverage(df: pd.DataFrame, symbol: str, window_size=20) -> pd.DataFrame:
+    ema = df[symbol].ewm(span=window_size, adjust=False).mean()
+    return pd.DataFrame({'EMA': ema})
+
+
+def StochasticOscillator(df: pd.DataFrame, symbol: str, lookback=14) -> pd.DataFrame:
+    low_min = df[symbol].rolling(window=lookback).min()
+    high_max = df[symbol].rolling(window=lookback).max()
+    k = 100 * ((df[symbol] - low_min) / (high_max - low_min))
+    d = k.rolling(window=3).mean()
+    return pd.DataFrame({'K': k, 'D': d})
+
+
+def AverageTrueRange(df: pd.DataFrame, symbol: str, period=14) -> pd.DataFrame:
+    high = df[symbol]
+    low = df[symbol]
+    close = df[symbol]
+    tr1 = high - low
+    tr2 = abs(high - close.shift())
+    tr3 = abs(low - close.shift())
+    true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    atr = true_range.rolling(window=period).mean()
+    return pd.DataFrame({'ATR': atr})
+
+
+def OnBalanceVolume(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    volume = get_data([symbol], df.index, colname='Volume')[symbol]
+    price_change = df[symbol].diff()
+    obv = (volume * (price_change > 0).astype(int) -
+           volume * (price_change < 0).astype(int)).cumsum()
+    return pd.DataFrame({'OBV': obv})
+
+
+def RateOfChange(df: pd.DataFrame, symbol: str, period=12) -> pd.DataFrame:
+    roc = ((df[symbol] - df[symbol].shift(period)) / df[symbol].shift(period)) * 100
+    return pd.DataFrame({'ROC': roc})
+
+
+def CommodityChannelIndex(df: pd.DataFrame, symbol: str, period=20) -> pd.DataFrame:
+    typical_price = df[symbol]
+    moving_average = typical_price.rolling(window=period).mean()
+    mean_deviation = abs(typical_price - moving_average).rolling(window=period).mean()
+    cci = (typical_price - moving_average) / (0.015 * mean_deviation)
+    return pd.DataFrame({'CCI': cci})
+
+
+def AverageDirectionalIndex(df: pd.DataFrame, symbol: str, period=14) -> pd.DataFrame:
+    high = df[symbol]
+    low = df[symbol]
+    close = df[symbol]
+    plus_dm = high.diff()
+    minus_dm = low.diff()
+    tr = pd.concat([high - low, abs(high - close.shift()), abs(low - close.shift())], axis=1).max(axis=1)
+    atr = tr.rolling(window=period).mean()
+    plus_di = 100 * (plus_dm.rolling(window=period).mean() / atr)
+    minus_di = 100 * (minus_dm.rolling(window=period).mean() / atr)
+    dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
+    adx = dx.rolling(window=period).mean()
+    return pd.DataFrame({'ADX': adx})
+
+
 def plot_data(df, title="Stock prices", xlabel="Date", ylabel="Price"):  		  	   		 	   		  		  		    	 		 		   		 		  
     import matplotlib.pyplot as plt  		  	   		 	   		  		  		    	 		 		   		 		  
   		  	   		 	   		  		  		    	 		 		   		 		  
