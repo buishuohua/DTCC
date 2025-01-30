@@ -28,7 +28,7 @@ def fetch_data(portfolio: Portfolio) -> pd.DataFrame:
     data = tickers.history(period=portfolio.period,
                            interval=portfolio.interval)
     pwd = os.getcwd()
-    data_path = os.path.join(pwd, 'data')
+    data_path = os.path.join(pwd, 'yf_data')
     if not os.path.exists(data_path):
         os.makedirs(os.path.dirname(data_path), exist_ok=True)
         data_file = os.path.join(data_path, 'ohlc.csv')
