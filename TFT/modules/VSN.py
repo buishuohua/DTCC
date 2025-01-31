@@ -44,14 +44,16 @@ class VariableSelectionNetwork(nn.Module):
 
         # Get variable selection weights (formula 6)
         # vXt = Softmax(GRNvx(Ξt, cs))
-        # [batch_size, time_steps, num_vars]
+        # [batch_size, time_steps, num_vars * d_model]
         weights = self.weight_grn(flattened_x, c)
 
         # Reshape weights to [batch_size, time_steps, num_vars]
         weights = weights.view(batch_size, time_steps, self.num_vars, -1)
-
         # Apply softmax to get weights
         weights = self.softmax(weights)
+
+        # Get the maximum weight for each time step
+        weights = weights.max(dim=-1, keepdim=True)[0]
 
         # Process each variable with its GRN (formula 7)
         processed_vars = []
@@ -64,9 +66,7 @@ class VariableSelectionNetwork(nn.Module):
         processed_vars = torch.stack(processed_vars, dim=2)
 
         # Combine using variable selection weights (formula 8)
-        # [batch_size, time_steps, num_vars, 1]
-        weights = weights.unsqueeze(-1)
-        # [batch_size, time_steps, d_model]
+
         combined = (weights * processed_vars).sum(dim=2)
 
         return combined

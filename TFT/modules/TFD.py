@@ -1,19 +1,27 @@
 import torch
 import torch.nn as nn
-from .GRN import GRN
-from .GLU import GLU
-from .MHAttention import InterpretableMultiHeadAttention
-from .VSN import VariableSelectionNetwork
+
+from TFT.modules.GRN import GRN
+from TFT.modules.GLU import GLU
+from TFT.modules.MHAttention import InterpretableMultiHeadAttention
+from TFT.modules.VSN import VariableSelectionNetwork
 
 
 class TemporalFusionDecoder(nn.Module):
-    def __init__(self, d_model, num_vars, num_heads, forecast_len, quantiles=[0.1, 0.5, 0.9], dropout=0.1):
+    def __init__(self, d_model, num_vars, original_dim, num_heads, forecast_len, quantiles=[0.1, 0.5, 0.9], dropout=0.1):
         super().__init__()
 
         self.d_model = d_model
+        self.original_dim = original_dim  # number of input variables
         self.forecast_len = forecast_len
         self.quantiles = quantiles
         self.num_quantiles = len(quantiles)
+
+        # Separate transformers for past and future inputs
+        self.past_transformer = nn.Linear(
+            self.original_dim, d_model)  # For all features
+        self.future_transformer = nn.Linear(
+            self.original_dim, d_model)  # For features except Close
 
         # Variable Selection Networks for past and future
         self.past_vsn = VariableSelectionNetwork(
@@ -23,7 +31,7 @@ class TemporalFusionDecoder(nn.Module):
         )
         self.future_vsn = VariableSelectionNetwork(
             d_model=d_model,
-            num_vars=num_vars,
+            num_vars=num_vars-1,  # One less feature for future
             dropout=dropout
         )
 
@@ -81,27 +89,36 @@ class TemporalFusionDecoder(nn.Module):
     def forward(self, x_past, x_future, mask=None):
         """
         Args:
-            x_past: Past input tensor [batch_size, past_len, num_vars, d_model]
-            x_future: Future input tensor [batch_size, future_len, num_vars, d_model]
+            x_past: Past input tensor [batch_size, past_len, num_vars]
+            x_future: Future input tensor [batch_size, future_len, num_vars-1]
             mask: Attention mask for decoder
         Returns:
             outputs: Tensor of shape [batch_size, forecast_len, num_quantiles]
-                    containing predictions for each time step and quantile
         """
         batch_size = x_past.size(0)
         past_len = x_past.size(1)
         future_len = x_future.size(1)
         total_len = past_len + future_len
 
-        # Create position indices: [-past_len, ..., -1, 0, 1, ..., future_len-1]
+        # Create position indices
         position_idx = torch.arange(-past_len,
                                     future_len, device=x_past.device)
         position_idx = position_idx.unsqueeze(0).expand(batch_size, total_len)
 
+        # Reshape and transform inputs
+        # Past sequence: all features
+        x_past = x_past.unsqueeze(-1)
+        x_future = x_future.unsqueeze(-1)
+
+        x_past_transformed = self.past_transformer(x_past)
+        # Future sequence: all features except Close
+        x_future_transformed = self.future_transformer(x_future)
+
         # Process through Variable Selection Networks
-        past_vsn = self.past_vsn(x_past)    # [batch_size, past_len, d_model]
+        # [batch_size, past_len, d_model]
+        past_vsn = self.past_vsn(x_past_transformed)
         # [batch_size, future_len, d_model]
-        future_vsn = self.future_vsn(x_future)
+        future_vsn = self.future_vsn(x_future_transformed)
 
         # Process past through encoder LSTM
         past_lstm, encoder_states = self.lstm_encoder(past_vsn)
