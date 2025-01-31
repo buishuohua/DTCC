@@ -21,7 +21,7 @@ def get_data(symbols, dates, addSPY=True, colname="Adj Close"):
             symbol_to_path(symbol),  		  	   		 	   		  		  		    	 		 		   		 		  
             index_col="Date",  		  	   		 	   		  		  		    	 		 		   		 		  
             parse_dates=True,  		  	   		 	   		  		  		    	 		 		   		 		  
-            usecols=["Date", colname],  		  	   		 	   		  		  		    	 		 		   		 		  
+            usecols=["Date", colname, "Volume"],  		  	   		 	   		  		  		    	 		 		   		 		  
             na_values=["nan"],  		  	   		 	   		  		  		    	 		 		   		 		  
         )  		  	   		 	   		  		  		    	 		 		   		 		  
         df_temp = df_temp.rename(columns={colname: symbol})  		  	   		 	   		  		  		    	 		 		   		 		  
