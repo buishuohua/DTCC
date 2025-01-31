@@ -78,7 +78,7 @@ class InterpretableMultiHeadAttention(nn.Module):
             # [batch_size, seq_len, 1] * [batch_size, seq_len, d_model]
 
             head_v = self.w_v(v_slice)  # [batch_size, seq_len, d_model]
-            head_output = attn.unsqueeze(-1) * head_v
+            head_output = torch.matmul(attn, head_v)
             head_outputs.append(head_output)
 
         # Stack and average attention outputs across heads

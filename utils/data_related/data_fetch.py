@@ -1,9 +1,13 @@
+from portfolio import Portfolio
+from config.data_settings import DataSettings
 import yfinance as yf
 import pandas as pd
 import os
 import sys
 
-from portfolio import Portfolio
+project_root = os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
 
 
 def get_index_components(index_symbol: str) -> list:
@@ -29,10 +33,10 @@ def fetch_data(portfolio: Portfolio) -> pd.DataFrame:
                            interval=portfolio.interval)
     pwd = os.getcwd()
     data_path = os.path.join(pwd, 'yf_data')
-    if not os.path.exists(data_path):
-        os.makedirs(os.path.dirname(data_path), exist_ok=True)
-        data_file = os.path.join(data_path, 'ohlc.csv')
-        data.to_csv(data_file)
+    print(data_path)
+    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    data_file = os.path.join(data_path, 'ohlc.csv')
+    data.to_csv(data_file)
     return data
 
 
